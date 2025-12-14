@@ -47,7 +47,7 @@ jobs:
     - name: Compile Sketches
       run: |
           cd embedded
-          make all
+          make all ONLY=OH4_left_Console/4A2A1-LDG_GEAR_PANEL
 
     # Upload .eep and .hex files as artifacts with expiration
     - name: Prep Artifacts
