@@ -277,11 +277,11 @@ CRGB ws2812b[BACKLIGHT_LEDS];
  */
 #define ENABLE_ELOG
 
-#if defined(ENABLE_ELOG)
-  #define _UFC_LOG(fmt, ...)  Logger.log(UFC_STATE_LOG_CH, ELOG_LEVEL_INFO, "[UfcState] " fmt, ##__VA_ARGS__)
-#else
-  #define _UFC_LOG(fmt, ...)  Serial.printf("[UfcState] " fmt "\n", ##__VA_ARGS__)
-#endif
+// #if defined(ENABLE_ELOG)
+//   #define _UFC_LOG(fmt, ...)  Logger.log(UFC_STATE_LOG_CH, ELOG_LEVEL_INFO, "[UfcState] " fmt, ##__VA_ARGS__)
+// #else
+//   #define _UFC_LOG(fmt, ...)  Serial.printf("[UfcState] " fmt "\n", ##__VA_ARGS__)
+// #endif
 
 #if defined(ENABLE_ELOG)
 // ELOG CONFIGURATION
