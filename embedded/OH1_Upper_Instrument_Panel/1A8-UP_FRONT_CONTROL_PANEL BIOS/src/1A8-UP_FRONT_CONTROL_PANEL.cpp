@@ -1,4 +1,3 @@
-#pragma message "Board macro: " ARDUINO_BOARD
 /**************************************************************************************
  *        ____                   _    _                       _
  *       / __ \                 | |  | |                     | |
@@ -142,38 +141,104 @@
 /**
  * @brief Pin Assignments 
  */
-#define SDApin          33
-#define SCLpin          35
-#define IO_INT          15
-#define BL_DATA_PIN     9
-#define ENC1PB          40
-#define ENC1A           38
-#define ENC1B           36
-#define ENC2PB          34
-#define ENC2A           21
-#define ENC2B           17
-#define DIO_3_3V        7
-#define OP1_CLK_3_3V    4
-#define OP2_CLK_3_3V    5
-#define OP3_CLK_3_3V    6
-#define OP4_CLK_3_3V    8
-#define OP5_CLK_3_3V    18
-#define CUE_CLK_3_3V    37
-#define VCC_SNS_3_3V    16
-#define COM1_CLK_3_3V   39
-#define COM2_CLK_3_3V   10
-#define ADC_RDY_3_3V    1
-#define SCRCS_3_3V      14
-#define SCRWR_3_3V      13
-#define SCRDATA_3_3V    12
-#define SCRBL_3_3V      11
+#if defined(ARDUINO_LOLIN_S2_MINI)
+  #define SDApin          33
+  #define SCLpin          35
+  #define IO_INT          15
+  #define BL_DATA_PIN     9
+  #define ENC1PB          40
+  #define ENC1A           38
+  #define ENC1B           36
+  #define ENC2PB          34
+  #define ENC2A           21
+  #define ENC2B           17
+  #define DIO_3_3V        7
+  #define OP1_CLK_3_3V    4
+  #define OP2_CLK_3_3V    5
+  #define OP3_CLK_3_3V    6
+  #define OP4_CLK_3_3V    8
+  #define OP5_CLK_3_3V    18
+  #define CUE_CLK_3_3V    37
+  #define VCC_SNS_3_3V    16
+  #define COM1_CLK_3_3V   39
+  #define COM2_CLK_3_3V   10
+  #define ADC_RDY_3_3V    1
+  #define SCRCS_3_3V      14
+  #define SCRWR_3_3V      13
+  #define SCRDATA_3_3V    12
+  #define SCRBL_3_3V      11
 
-#define OP_DIGITS       4
-#define COM1_DIGITS     1
-#define COM2_DIGITS     1
-#define UFC_COMM1_VOL   A0
-#define UFC_COMM2_VOL   A1
-#define UFC_BRT_POT     A2
+  #define OP_DIGITS       4
+  #define COM1_DIGITS     1
+  #define COM2_DIGITS     1
+  #define UFC_COMM1_VOL   A0
+  #define UFC_COMM2_VOL   A1
+  #define UFC_BRT_POT     A2
+#endif
+
+/**
+ * @brief LOLIN S3 Mini pin assignments.
+ *
+ * @details The S2 Mini and S3 Mini share the same physical "Mini" header
+ *          footprint (2x8 left header, 2x8 right header) so a module can be
+ *          swapped into the same socket, but the ESP32-S2 and ESP32-S3 dies
+ *          expose different GPIO numbers at several of those physical
+ *          positions. These defines were derived by mapping each S2 Mini pin
+ *          to its physical header position (per Lolin's official pinout
+ *          diagrams for both boards) and reading off the GPIO number the S3
+ *          Mini exposes at that same physical position — NOT by reusing the
+ *          same GPIO number. This was cross-checked against the Arduino core's
+ *          per-board defaults (SDA/SCL, TX/RX, SCK/MISO/MOSI/SS all matched
+ *          exactly), so confidence is high, but this has not yet been bench
+ *          verified against an actual populated PCB — do a continuity check
+ *          before relying on it with real hardware.
+ *
+ * @note    Two pins intentionally swap position relative to the S2 Mini
+ *          mapping and are easy to transpose by mistake:
+ *          - UFC_COMM2_VOL / UFC_BRT_POT swap A1↔A2 (GPIO2↔GPIO3) between
+ *            the two boards at the same physical header pin.
+ *          - CUE_CLK_3_3V / COM1_CLK_3_3V land on GPIO44/43 (the S3 Mini's
+ *            UART0 RX/TX pins), mirroring how the S2 Mini block already
+ *            repurposes its own UART0 pins (GPIO37/39) for the same signals —
+ *            fine here since DCS-BIOS communicates over native USB CDC, not
+ *            UART0, on both boards.
+ */
+#if defined(ARDUINO_LOLIN_S3_MINI)
+  #define SDApin          35
+  #define SCLpin          36
+  #define IO_INT          15
+  #define BL_DATA_PIN     13
+  #define ENC1PB          33
+  #define ENC1A           37
+  #define ENC1B           38
+  #define ENC2PB          34
+  #define ENC2A           21
+  #define ENC2B           17
+  #define DIO_3_3V        12
+  #define OP1_CLK_3_3V    5
+  #define OP2_CLK_3_3V    4
+  #define OP3_CLK_3_3V    6
+  #define OP4_CLK_3_3V    7
+  #define OP5_CLK_3_3V    18
+  #define CUE_CLK_3_3V    44
+  #define VCC_SNS_3_3V    16
+  #define COM1_CLK_3_3V   43
+  #define COM2_CLK_3_3V   8
+  #define ADC_RDY_3_3V    1
+  #define SCRCS_3_3V      14
+  #define SCRWR_3_3V      9
+  #define SCRDATA_3_3V    10
+  #define SCRBL_3_3V      11
+
+  #define OP_DIGITS       4
+  #define COM1_DIGITS     1
+  #define COM2_DIGITS     1
+  #define UFC_COMM1_VOL   A0
+  #define UFC_COMM2_VOL   A2
+  #define UFC_BRT_POT     A1
+#endif
+
+
 
 /**
  * @brief TCA8418 GPIO PINS USED OR NOT FOR COMPLETENESS
@@ -1615,14 +1680,7 @@ void setup() {
   // while (!Serial) delay(10);
   // Serial.println("Openhornet Up-Front Controller");
 
-  #if defined (ENABLE_ELOG)
-    Logger.configureSyslog("192.168.1.12", 514, "UFC"); // Syslog server IP, port and device name
-    Logger.registerSyslog(MYLOG, ELOG_LEVEL_DEBUG, ELOG_FAC_USER, "counter"); // ...and syslog. Set the facility to user
-    connect_wifi();
-    delay(10);
-    Logger.log(MYLOG, ELOG_LEVEL_INFO , "Openhornet Up-Front Controller HW Version %s, FW Version %s", BOOT_OP_MESSAGES[3], BOOT_OP_MESSAGES[4]);
-  #endif
-  
+ 
   // Ensure ENC1PB is readable early for boot-time OTA mode selection
   pinMode(ENC1PB, INPUT_PULLUP);
   ufcState.begin();  // configures VCC_SNS_3_3V as INPUT_PULLUP
@@ -1631,6 +1689,15 @@ void setup() {
   // Set runtime configuration states that reflect the current firmware build.
   // These are applied after load() so they always reflect actual compiled behaviour
   // rather than a potentially stale saved value.
+  
+  
+  #if defined (ENABLE_ELOG)
+    Logger.configureSyslog("192.168.1.12", 514, "UFC"); // Syslog server IP, port and device name
+    Logger.registerSyslog(MYLOG, ELOG_LEVEL_DEBUG, ELOG_FAC_USER, "counter"); // ...and syslog. Set the facility to user
+    connect_wifi();
+    delay(10);
+    Logger.log(MYLOG, ELOG_LEVEL_INFO , "Openhornet Up-Front Controller HW Version %s, FW Version %s", BOOT_OP_MESSAGES[3], BOOT_OP_MESSAGES[4]);
+  #endif
 
   // irqmode: driven by compile-time defines — IRQ if USE_ADC_RDY or USE_IO_INT is defined, else POLLING.
   #if defined(USE_ADC_RDY) || defined(USE_IO_INT)
