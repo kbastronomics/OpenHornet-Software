@@ -154,7 +154,13 @@ public:
     NOBOOTMSG, ///< PLACEHOLDER — user preference: skip boot message splash screen.
     // ── irqmode field tokens ──
     IRQ,       ///< PLACEHOLDER — user preference: interrupt-driven keyboard and ADC input.
-    POLLING    ///< PLACEHOLDER — user preference: polling-driven keyboard and ADC input.
+    POLLING,   ///< PLACEHOLDER — user preference: polling-driven keyboard and ADC input.
+    // ── hidmode field tokens ──
+    HID,       ///< PLACEHOLDER — user preference: USB HID device mode active.
+    NOHID,     ///< PLACEHOLDER — user preference: USB HID mode disabled; CDC/Serial only.
+    // ── elogmode field tokens ──
+    ELOGON,    ///< PLACEHOLDER — user preference: Elog remote/syslog logging enabled.
+    ELOGOFF    ///< PLACEHOLDER — user preference: Elog logging disabled; Serial only.
   };
 
   // ── Snapshot: all concurrent state dimensions ─────────────────────────────
@@ -172,6 +178,8 @@ public:
    *          | otamode    | State    | OTA, NOOTA                | IMPLEMENTED          |
    *          | bootmode   | State    | BOOTMSG, NOBOOTMSG        | PLACEHOLDER          |
    *          | irqmode    | State    | IRQ, POLLING              | PLACEHOLDER          |
+   *          | hidmode    | State    | HID, NOHID                | PLACEHOLDER          |
+   *          | elogmode   | State    | ELOGON, ELOGOFF           | PLACEHOLDER          |
    *          | brightness | uint8_t  | 0–255                     | Set by setBrightness |
    *          | maxCurrent | uint16_t | mA (default 500)          | Set by setMaxCurrent |
    *          | minCurrent | uint16_t | mA (default 38)           | Set by setMinCurrent |
@@ -185,6 +193,8 @@ public:
     State   otamode    = State::NOOTA;   ///< OTA selection (IMPLEMENTED): OTA | NOOTA. Set by setOtaMode(); persisted.
     State   bootmode   = State::BOOTMSG; ///< Boot splash preference (PLACEHOLDER): BOOTMSG | NOBOOTMSG. Set by setBootMode(); persisted.
     State   irqmode    = State::POLLING; ///< Input mode (PLACEHOLDER): IRQ | POLLING. Set by setIrqMode(); persisted.
+    State   hidmode    = State::NOHID;   ///< USB HID mode (PLACEHOLDER): HID | NOHID. Set by setHidMode(); persisted.
+    State   elogmode   = State::ELOGOFF; ///< Elog logging (PLACEHOLDER): ELOGON | ELOGOFF. Set by setElogMode(); persisted.
     uint8_t  brightness  = 128; ///< UFC display brightness 0–255. Set by setBrightness(); persisted.
     uint16_t maxCurrent  = 500; ///< Maximum allowed backlight current in mA. Set by setMaxCurrent(); persisted.
     uint16_t minCurrent  = 38;  ///< Minimum operating current in mA. Set by setMinCurrent(); persisted.
@@ -293,6 +303,41 @@ public:
   }
 
   /**
+   * @brief  Set the USB HID device mode.  (PLACEHOLDER — not yet implemented)
+   *
+   * @details When implemented, enables the board to appear as a USB HID joystick /
+   *          keyboard device in addition to (or instead of) CDC Serial.  Persisted
+   *          by save() / load().
+   *
+   * @todo    Wire to USB descriptor / TinyUSB HID initialisation when implemented.
+   *
+   * @param enabled  true = HID active (@c State::HID);
+   *                 false = HID disabled, CDC only (@c State::NOHID).
+   */
+  void setHidMode(bool enabled) {
+    // @todo: initialise / tear down TinyUSB HID descriptor here once implemented.
+    _snapshot.hidmode = enabled ? State::HID : State::NOHID;
+  }
+
+  /**
+   * @brief  Set the Elog remote/syslog logging mode.  (PLACEHOLDER — not yet implemented)
+   *
+   * @details When implemented, controls whether Elog routes messages to the
+   *          configured syslog server (ELOGON) or suppresses remote logging so
+   *          only the local Serial output is used (ELOGOFF).  Persisted by
+   *          save() / load().
+   *
+   * @todo    Wire to Logger.configureSyslog() / Logger disable call when implemented.
+   *
+   * @param enabled  true = Elog remote logging active (@c State::ELOGON);
+   *                 false = local Serial only (@c State::ELOGOFF).
+   */
+  void setElogMode(bool enabled) {
+    // @todo: enable / disable Elog syslog output here once runtime switching is implemented.
+    _snapshot.elogmode = enabled ? State::ELOGON : State::ELOGOFF;
+  }
+
+  /**
    * @brief  Set the UFC display brightness level.
    *
    * @details Stores the brightness value in the Snapshot so it is included in
@@ -369,6 +414,20 @@ public:
   bool getIrqMode()  const { return _snapshot.irqmode  == State::IRQ; }
 
   /**
+   * @brief  Return true if USB HID mode is active.
+   * @details Equivalent to @c snapshot().hidmode == State::HID.
+   * @return @c true = HID active; @c false = CDC/Serial only.
+   */
+  bool getHidMode()  const { return _snapshot.hidmode  == State::HID; }
+
+  /**
+   * @brief  Return true if Elog remote/syslog logging is active.
+   * @details Equivalent to @c snapshot().elogmode == State::ELOGON.
+   * @return @c true = Elog logging active; @c false = Serial only.
+   */
+  bool getElogMode() const { return _snapshot.elogmode == State::ELOGON; }
+
+  /**
    * @brief  Return true if the boot splash screen is configured to show.
    * @details Equivalent to @c snapshot().bootmode == State::BOOTMSG.
    * @return @c true = show boot splash; @c false = skip it.
@@ -421,18 +480,20 @@ public:
    *          | @c "otam"  | uint8_t  | otamode enum value                                  |
    *          | @c "bootm" | uint8_t  | bootmode enum value                                 |
    *          | @c "irqm"  | uint8_t  | irqmode enum value                                  |
-   *          | @c "pwr"    | uint8_t  | last detected power enum value                           |
-   *          | @c "brt"    | uint8_t  | brightness 0–255                                         |
-   *          | @c "maxcur" | uint16_t | maximum current limit in mA                              |
-   *          | @c "mincur" | uint16_t | minimum current floor in mA                              |
-   *          | @c "crc"    | uint8_t  | CRC-8/SMBUS over (ver,otam,bootm,irqm,pwr,brt,maxcur×2,mincur×2) |
+   *          | @c "pwr"    | uint8_t  | last detected power enum value                                |
+   *          | @c "brt"    | uint8_t  | brightness 0–255                                              |
+   *          | @c "maxcur" | uint16_t | maximum current limit in mA                                   |
+   *          | @c "mincur" | uint16_t | minimum current floor in mA                                   |
+   *          | @c "hid"    | uint8_t  | HID mode enum value                                                  |
+   *          | @c "elog"   | uint8_t  | Elog mode enum value                                                 |
+   *          | @c "crc"    | uint8_t  | CRC-8/SMBUS over (ver,otam,bootm,irqm,pwr,brt,maxcur×2,mincur×2,hid,elog) |
    *
    * @return @c true if the namespace opened and all keys were written.
    * @return @c false if NVS is unavailable.
    */
   bool save() {
     // uint16_t fields are split into high/low bytes for CRC coverage
-    const uint8_t data[10] = {
+    const uint8_t data[12] = {
       NVS_VERSION,
       static_cast<uint8_t>(_snapshot.otamode),
       static_cast<uint8_t>(_snapshot.bootmode),
@@ -442,7 +503,9 @@ public:
       static_cast<uint8_t>(_snapshot.maxCurrent >> 8),
       static_cast<uint8_t>(_snapshot.maxCurrent & 0xFF),
       static_cast<uint8_t>(_snapshot.minCurrent >> 8),
-      static_cast<uint8_t>(_snapshot.minCurrent & 0xFF)
+      static_cast<uint8_t>(_snapshot.minCurrent & 0xFF),
+      static_cast<uint8_t>(_snapshot.hidmode),
+      static_cast<uint8_t>(_snapshot.elogmode)
     };
 
     Preferences prefs;
@@ -459,6 +522,8 @@ public:
     prefs.putUChar("brt",   data[5]);
     prefs.putUShort("maxcur", _snapshot.maxCurrent);
     prefs.putUShort("mincur", _snapshot.minCurrent);
+    prefs.putUChar("hid",   static_cast<uint8_t>(_snapshot.hidmode));
+    prefs.putUChar("elog",  static_cast<uint8_t>(_snapshot.elogmode));
     prefs.putUChar("crc",   _crc8(data, sizeof(data)));
     prefs.end();
 
@@ -490,6 +555,8 @@ public:
    *          - @c brightness → 128        — mid-range
    *          - @c maxCurrent → 500 mA     — external bus supply limit
    *          - @c minCurrent → 38 mA      — minimum operating current
+   *          - @c hidmode   → @c NOHID    — HID disabled by default
+   *          - @c elogmode  → @c ELOGOFF  — Elog remote logging disabled by default
    *
    * @return @c true  — all checks passed; Snapshot updated from NVS.
    * @return @c false — namespace absent, eyecatcher mismatch, version mismatch,
@@ -521,7 +588,7 @@ public:
     // ── Read all data bytes (uint16_t fields split to high/low for CRC) ──────
     const uint16_t maxCur = prefs.getUShort("maxcur", 500);
     const uint16_t minCur = prefs.getUShort("mincur", 38);
-    const uint8_t data[10] = {
+    const uint8_t data[12] = {
       ver,
       prefs.getUChar("otam",  static_cast<uint8_t>(State::NOOTA)),
       prefs.getUChar("bootm", static_cast<uint8_t>(State::BOOTMSG)),
@@ -531,7 +598,9 @@ public:
       static_cast<uint8_t>(maxCur >> 8),
       static_cast<uint8_t>(maxCur & 0xFF),
       static_cast<uint8_t>(minCur >> 8),
-      static_cast<uint8_t>(minCur & 0xFF)
+      static_cast<uint8_t>(minCur & 0xFF),
+      prefs.getUChar("hid",   static_cast<uint8_t>(State::NOHID)),
+      prefs.getUChar("elog",  static_cast<uint8_t>(State::ELOGOFF))
     };
     const uint8_t storedCrc = prefs.getUChar("crc", 0);
     prefs.end();
@@ -550,6 +619,8 @@ public:
     _snapshot.brightness = data[5];
     _snapshot.maxCurrent = maxCur;
     _snapshot.minCurrent = minCur;
+    _snapshot.hidmode    = static_cast<State>(data[10]);
+    _snapshot.elogmode   = static_cast<State>(data[11]);
 
     _UFC_LOG("NVS load: OK");
     return true;
@@ -580,11 +651,11 @@ private:
    * @brief  NVS schema version — increment whenever the set of saved keys or their meaning changes.
    *
    * Version history:
-   * - 1: otamode, bootmode, irqmode only; CRC over 4 bytes.
-   * - 2: added power and brightness; CRC over 6 bytes.
-   * - 3: added maxCurrent and minCurrent (uint16_t each); CRC over 10 bytes.
+   * - 1: initial release schema — power, otamode, bootmode, irqmode, hidmode, elogmode,
+   *      brightness, maxCurrent, minCurrent; CRC-8/SMBUS over 12 bytes.
+   *      Increment this value on the first deployment whenever the field set changes.
    */
-  static constexpr uint8_t  NVS_VERSION = 3;
+  static constexpr uint8_t  NVS_VERSION = 1;
 
   /**
    * @brief  Compute CRC-8/SMBUS over a byte buffer (polynomial 0x07, init 0x00).
